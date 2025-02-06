@@ -1,9 +1,25 @@
 #########get
-POST http://localhost:4004/odata/v4/PurchaseApproval/Requests(12)/sendforapproval.
+POST http://localhost:4004/odata/v4/PurchaseApproval/datafrombpa
 Content-Type: application/json
 
 {
+  "status": "A",
+  "requestid": "14"
+}
 
+###get
+POST http://localhost:4004/odata/v4/PurchaseApproval/approveRequest
+Content-Type: application/json
+
+{
+  "requestid": "13"
+}
+###get
+POST http://localhost:4004/odata/v4/PurchaseApproval/rejectRequest
+Content-Type: application/json
+
+{
+  "requestid": "13"
 }
 #####
 POST http://localhost:4004/odata/v4/PurchaseApproval/sendforapproval
@@ -12,109 +28,11 @@ Content-Type: application/json
 {
 }
 
-####
-GET http://localhost:4004/odata/v4/PurchaseApproval/Requests(requestid='13',IsActiveEntity=true)
-Content-Type: application/json
 
-{}
-
-
-###get
-GET http://localhost:4004/odata/v4/PurchaseApproval.Requests
-
-
-#########get
-POST http://localhost:4004/api/v1/PurchaseApproval/Requests(requestid=12,IsActiveEntity=true)/PurchaseApproval.sendforApproval
-Content-Type: application/json
-
-{
-}
-#########get
-POST http://localhost:4004/odata/v4/PurchaseApproval/Requests(requestid=13,IsActiveEntity=true)/PurchaseApproval.sendforApproval
-Content-Type: application/json
-
-{
-}
-
-
-####
-GET http://localhost:4004/odata/v4/PurchaseApproval.sendforApproval
-Content-Type: application/json
-
-{
-    "requestid": 12
-}
-#####
-POST http://localhost:4004/sendforApproval
-Content-Type: application/json
-
-{
-    "requestid": 13
-}
-
-####
-POST http://localhost:4004/api/v1/sendforApproval
-Content-Type: application/json
-
-{
-    "requestid": 13
-}
-
-
-
-#####get
-POST http://localhost:4004/api/v1/PurchaseApproval/Requests(requestid=13,IsActiveEntity=true)/PurchaseApproval.sendforApproval
-Content-Type: application/json
-
-{}
-
-####
-POST http://localhost:4004/api/v1/sendforApproval
-Content-Type: application/json
-
-{
-    "requestid" : 13
-}
-###
-POST http://localhost:4004/odata/v4/mainservice/reqHeaderSet(headerID=550e8400-e29b-41d4-a716-446655440100,IsActiveEntity=true)/MainService.rejectRequest
+### Test choosing approver for total price greater than 50000
+GET http://localhost:4004/odata/v4/PurchaseApproval/approverSelection
 Content-Type: application/json
  
 {
-    "headerID" : "550e8400-e29b-41d4-a716-446655440100"
-}
-
-### Test choosing approver for total price greater than 25000
-GET http://localhost:4004/api/v1/chooseApprover
-Content-Type: application/json
-
-{
-    "totalPrice": 567
-}
-
-### Test choosing approver for total price greater than 10000
-GET http://localhost:4004/api/v1/chooseApprover
-Content-Type: application/json
-
-{
     "totalPrice": 15000
 }
-####
-GET http://localhost:4004/api/v1/EmailList
-### Test choosing approver for total price greater than 10000
-GET http://localhost:4004/api/v1/chooseApprover
-Content-Type: application/json
-
-{
-    "totalPrice": 28000
-}
-
-### Test choosing approver for total price greater than 50000
-GET http://localhost:4004/api/v1/chooseApprover
-Content-Type: application/json
-
-{
-    "totalPrice": 55000
-}
-
-#########
-GET http://localhost:4004/api/v1/chooseApprover?totalPrice=15000

@@ -1,14 +1,71 @@
 const cds = require('@sap/cds');
 
 module.exports = cds.service.impl(async function () {
-  const { Requests, RequestItems } = this.entities;
+  const { Requests, RequestItems ,EmailList } = this.entities;
+  const db = await cds.connect.to('db');
 
+  this.after('CREATE', Requests, async (data, req) => {
+    await UPDATE(Requests)
+      .set({ status: 'N' }) // 'N' represents 'New'
+      .where({ requestid: data.requestid });
+
+    console.log(`New request created with ID ${data.requestid}, status set to 'New'`);
+  });
+
+  //Choosing Approvers 
+
+  this.on('approverSelection', async req => {
+      let value = req.data.totalPrice;
+
+      try {
+          const result = await findApprovers(value);
+          return result;
+      } catch (error) {
+          console.error("Error fetching approvers:", error);
+          return [{ email: 'none', level: 0 }];
+      }
+  });
+
+  async function findApprovers(value) {
+     
+      const approvers = await SELECT.from(EmailList)
+                                    .where({ approvalValue: { '<=': value } })
+                                    .orderBy('approvalValue asc');
+     
+      if (approvers.length > 0) {
+          return approvers;
+      } else {
+          return [{ email: 'none',
+              approvalValue: 0, }];
+      }
+  }
+
+    // event handler for data coming from BPA
+
+    this.on('datafrombpa', async (req) => {
+      console.log("Received Status:", req.data.status);
+      if (req.data.status !== 'A' && req.data.status !== 'X') {
+          console.log("Invalid status received. Expected 'A' or 'X'.");
+          return;
+      }
+      await UPDATE(Requests)
+          .set({ status: req.data.status })
+          .where({ requestid: req.data.requestid });
+      console.log("Status updated to:", req.data.status);
+  });
+  // Action for send for approval
   this.on('sendforapproval', async (req) => {
     const requestId = req.params[0].requestid;  
 
     console.log('Request ID:', requestId);
 
     try {
+      await UPDATE(Requests)
+        .set({ status: 'P' })
+        .where({ requestid: requestId });
+
+      console.log(`Request ID ${requestId} status updated to 'In Approval'`);
+
       // Fetch Request Header
       const payload_bpa_header = await SELECT.one.from(Requests).where({ requestid: requestId });
       
@@ -23,8 +80,10 @@ module.exports = cds.service.impl(async function () {
 
       let payload = {
         "definitionId": "us10.buyerportalpoc-aeew31u1.requestorder.orderProcesssing",
+        //"definitionId": "us10.buyerportalpoc-aeew31u1.processrequestorder2.orderProcesssing",
         "context": {
-            "input": {
+            "requests": {
+              "Request": {
               "requestid": payload_bpa_header.requestid,
               "requestno": payload_bpa_header.requestno,
               "requestdesc": payload_bpa_header.requestdesc,
@@ -40,6 +99,7 @@ module.exports = cds.service.impl(async function () {
               }))
             }
         }
+      }
       };
 
       let oResult = await product_api.tx(req).post('/workflow/rest/v1/workflow-instances', payload);
@@ -52,4 +112,80 @@ module.exports = cds.service.impl(async function () {
       req.reject({ message: `Error: ${error.message}` });
     }
   });
+
+
+// Approve Request Action
+this.on('approveRequest', async (req) => {
+  try {
+      const { requestid } = req.data;
+      if (!requestid) return req.error(400, "Missing headerID");
+
+      const entity = "my.company.Requests";
+      console.log("triggering")
+      // Check if the record exists
+      const result = await db.run(SELECT.from(entity).where({ requestid }));
+      if (result.length === 0) {
+          return req.error(404, "Request not found");
+      }
+
+      // Update status
+      await db.run(UPDATE(entity).set({ status: 'A' }).where({ requestid }));
+
+      return requestid;
+
+  } catch (error) {
+      return req.error(500, "Approval failed", { error: error.message });
+  }
+});
+
+// Reject Request Action
+this.on('rejectRequest', async (req) => {
+  try {
+      const { requestid } = req.data;
+      if (!requestid) return req.error(400, "Missing headerID");
+
+      const entity = "my.company.Requests";
+
+      // Check if the record exists
+      const result = await db.run(SELECT.from(entity).where({ requestid }));
+      if (!result || result.length === 0) {
+          return req.error(404, `Request with ID ${requestid} not found`);
+      }
+
+      // Update status to 'Rejected'
+      await db.run(UPDATE(entity).set({ status: 'X' }).where({ requestid }));
+
+      return requestid;
+
+  } catch (error) {
+      return req.error(500, "Rejection failed", { error: error.message });
+  }
+});
+
+/* 
+this.on('responsefrombpa', async (req) => {
+ 
+  console.log(req.data.status);
+
+  if (req.data.status === "A") {
+    // updated status to ordered
+
+    await UPDATE(Requests)
+      .set({ status: 'A' })
+      .where({ requestid: req.data.requestid });
+
+
+  } else {
+    console.log("bye")
+
+    // update status to rejected
+
+    await UPDATE(Requests)
+      .set({ status: 'X' })
+      .where({ requestid: req.data.requestid });
+  }
+
+  
+}); */
+
 });

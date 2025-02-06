@@ -39,7 +39,7 @@ sap.ui.define([
 
                 success: function (json) {
 
-                    MessageToast.show("approval send");
+                    MessageToast.show("Approval Request initiated successfully");
 
                     // window.location.reload(); 
 

@@ -160,7 +160,7 @@
                                             "press": "sricapm1.project1.ext.controller.ApprovalSending.ApprovalSendingMethod",
                                             "visible": true,
                                             "enabled": true,
-                                            "text": "ApprovalSending",
+                                            "text": "Send for Approval",
                                             "position": {
                                                 "placement": "Before",
                                                 "anchor": "EditAction"

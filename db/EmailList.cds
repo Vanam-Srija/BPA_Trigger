@@ -13,6 +13,7 @@ entity Requests {
     requestdesc    : String;
     requestby      : String;
     totalprice     : Integer;
+    status         : String;
     requestitems   : Composition of many RequestItems on requestitems.Request = $self;
 }
 

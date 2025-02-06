@@ -1,8 +1,7 @@
 using PurchaseApproval as service from '../../srv/service';
 
 annotate service.Requests with @(
-    Common.DefaultValuesFunction : 'getOrderDefaults',
-    
+   //Common.DefaultValuesFunction : 'getOrderDefaults',
     UI.FieldGroup #GeneralInfo : {
         $Type : 'UI.FieldGroupType',
         Data : [
@@ -36,11 +35,11 @@ annotate service.Requests with @(
                 Label : 'Total Price',
                 Value : totalprice
             },
-        {
-            $Type : 'UI.DataFieldForAction',
-            Action : 'PurchaseApproval.sendforapproval',
-            Label : 'Send for Approval'
-        }
+            {
+                $Type : 'UI.DataField',
+                Label : 'Status',
+                Value : status,
+            }
         ]
     },
 
@@ -83,7 +82,12 @@ annotate service.Requests with @(
             $Type : 'UI.DataField',
             Label : 'Total Price',
             Value : totalprice
-        }
+        },
+            {
+                $Type : 'UI.DataField',
+                Label : 'Status',
+                Value : status,
+            }
     ]
 );
 
