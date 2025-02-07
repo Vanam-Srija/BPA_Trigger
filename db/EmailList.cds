@@ -8,18 +8,18 @@ entity EmailList {
 }
 
 entity Requests {
-    key requestid  : String;
+    key requestid  : Integer;
     requestno      : String;
     requestdesc    : String;
     requestby      : String;
-    totalprice     : Integer;
+    totalprice     : Integer @readonly;
     status         : String;
     requestitems   : Composition of many RequestItems on requestitems.Request = $self;
 }
 
 
 entity RequestItems {
-    key ItemNo     : String;
+    key ItemNo     : Integer;
     ItemDesc       : String;
     Quantity       : Integer;
     ItemPrice      : Integer;
