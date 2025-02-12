@@ -1,15 +1,15 @@
 using my.company as db from '../db/EmailList';
-
+ 
 service PurchaseApproval @(path: 'PurchaseApproval') {
   entity Requests @(odata.draft.enabled: true) as projection on db.Requests{
     *,
-    requestitems,
+    requestitems : Composition of many RequestItems on requestitems.Request_requestid = requestid,
     case status
             when 'P' then 'Pending'
             when 'N' then 'New'
             when 'A' then 'Approved'
             when 'X' then 'Rejected'
-            when 'E' then 'Edited'  // New status for Edited
+            when 'E' then 'Edited'
             end as status : String(10),
         case status
             when 'P' then 2
@@ -27,9 +27,32 @@ service PurchaseApproval @(path: 'PurchaseApproval') {
   action datafrombpa (requestid: Integer, status: String);
   action approveRequest (requestid: Integer);
   action rejectRequest (requestid: Integer);
-  action editRequest () returns array of RequestItems;
-
-  //function getOrderDefaults() returns Requests;
+  action updateRequestItems(
+    requestid: Integer,
+    status: String,
+    //requestitems:  Array of RequestItems,
+    requestitems:  Array of {
+        ItemNo: Integer;
+        ItemDesc: String;
+        Quantity: Integer;
+        ItemPrice: Integer;
+        Material: String;
+        Plant: String;
+    }
+) returns {
+    requestid: Integer;
+    status: String;
+    //requestitems:  Array of RequestItems;
+    requestitems: Array of {
+        ItemNo: Integer;
+      //Request_requestid: Integer;
+        ItemDesc: String;
+        Quantity: Integer;
+        ItemPrice: Integer;
+        Material: String;
+        Plant: String;
+    };
+};
   entity EmailList as projection on db.EmailList;
   function approverSelection(totalPrice: Integer) returns array of EmailList;
 }

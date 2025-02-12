@@ -3,9 +3,31 @@ POST http://localhost:4004/odata/v4/PurchaseApproval/datafrombpa
 Content-Type: application/json
 
 {
-  "status": "A",
+  "status": "X",
   "requestid": "14"
 }
+
+##### get the update request item
+POST http://localhost:4004/odata/v4/PurchaseApproval/updateRequestItems
+Content-Type: application/json
+
+{
+  "requestid": 12,
+  "status": "E",
+  "requestitems": [
+    {
+      "ItemNo": 1,
+      "ItemDesc": "Srija356",
+      "Quantity": 31,
+      "ItemPrice": 11,
+      "Material": "11",
+      "Plant": "11"
+    }
+  ]
+}
+
+#########get
+GET http://localhost:4004/odata/v4/PurchaseApproval/editRequest(requestid=13)
 
 ###get
 POST http://localhost:4004/odata/v4/PurchaseApproval/approveRequest

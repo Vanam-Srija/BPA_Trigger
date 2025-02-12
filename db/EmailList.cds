@@ -14,16 +14,16 @@ entity Requests {
     requestby      : String;
     totalprice     : Integer @readonly;
     status         : String;
-    requestitems   : Composition of many RequestItems on requestitems.Request = $self;
+    requestitems   : Composition of many RequestItems on requestitems.Request_requestid = requestid;
 }
 
-
 entity RequestItems {
-    key ItemNo     : Integer;
-    ItemDesc       : String;
-    Quantity       : Integer;
-    ItemPrice      : Integer;
-    Material       : String;
-    Plant          : String;
-    Request        : Association to Requests;
+    key ItemNo           : Integer;
+    key Request_requestid: Integer;  // ✅ Ensure uniqueness per request
+    ItemDesc             : String;
+    Quantity             : Integer;
+    ItemPrice            : Integer;
+    Material             : String;
+    Plant                : String;
+    Request              : Association to Requests on Request_requestid = Request.requestid;
 }

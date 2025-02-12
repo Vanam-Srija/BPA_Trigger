@@ -38,7 +38,7 @@ annotate service.Requests with @(
             {
                 $Type : 'UI.DataField',
                 Label : 'Status',
-                Value : status,
+                Value : status
             }
         ]
     },
