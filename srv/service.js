@@ -127,10 +127,8 @@ module.exports = cds.service.impl(async function () {
           }
         }
         };
-  
         let oResult = await product_api.tx(req).post('/workflow/rest/v1/workflow-instances', payload);
         console.log("Workflow Response:", oResult);
-  
         req.reply({ message: "Approval process initiated successfully!" });
   
       } catch (error) {
@@ -187,7 +185,6 @@ module.exports = cds.service.impl(async function () {
   }
     });
 
-
     // event handler for data coming from BPA
 
     this.on('datafrombpa', async (req) => {
@@ -228,105 +225,193 @@ module.exports = cds.service.impl(async function () {
     }
 });
 
-
-
-
-//data from bpa update request items
-this.on('updateRequestItems', async (req) => {
-    console.log("Raw Incoming Request:", JSON.stringify(req.data, null, 2));
-    console.log("Full Incoming Request:", JSON.stringify(req, null, 2)); 
-    
+  
+this.on('EditRequestItems', async (req) => {
     try {
-        console.log("Type of requestitems:", typeof req.data.requestitems);
-        
-        if (typeof req.data.requestitems === 'string') {
-            try {
-                req.data.requestitems = JSON.parse(req.data.requestitems);
-                console.log("Parsed requestitems successfully:", JSON.stringify(req.data.requestitems, null, 2));
-            } catch (parseError) {
-                throw new Error("Invalid JSON format for requestitems");
-            }
+        const { requestid } = req.data;
+        if (!requestid) return req.error(400, "Missing requestid");
+
+        const db = cds.transaction(req);
+
+        console.log("Fetching approved request items for requestid:", requestid);
+
+        // Fetch all related request items
+        const requestItems = await db.run(
+            SELECT.from('my.company.RequestItems').where({ Request_requestid: requestid })
+        );
+
+        if (!requestItems.length) {
+            return req.error(404, "No request items found for the given requestid");
         }
 
-        if (!req.data.requestid) throw new Error("Missing requestid");
-        if (!req.data.status) throw new Error("Missing status");
-        if (!Array.isArray(req.data.requestitems)) throw new Error("Invalid requestitems format");
-
-        console.log(" Extracted requestitems:", JSON.stringify(req.data.requestitems, null, 2));
-
-        let existingRequest = await SELECT.one.from(Requests).where({ requestid: req.data.requestid });
-
-        if (!existingRequest) {
-            console.warn(` No request found for requestid: ${req.data.requestid}, creating a new one...`);
-            await INSERT.into(Requests).entries({
-                requestid: req.data.requestid,
-                status: req.data.status
-            });
-        } else {
-            console.log(" Request Exists. Updating Status...");
-            await UPDATE(Requests)
-                .set({ status: req.data.status })
-                .where({ requestid: req.data.requestid });
-        }
-
-        for (const item of req.data.requestitems) {
-            console.log("Processing Item:", JSON.stringify(item, null, 2));
-
-            if (!item.ItemNo) {
-                console.warn("Skipping invalid item:", item);
-                continue;
-            }
-
-            const existingItem = await SELECT.one.from(RequestItems)
-                .where({ ItemNo: item.ItemNo, Request_requestid: req.data.requestid });
-
-            if (existingItem) {
-                console.log(`Updating existing item with ItemNo: ${item.ItemNo} for requestid: ${req.data.requestid}`);
-                await UPDATE(RequestItems)
-                    .set({
-                        ItemDesc: item.ItemDesc,
-                        Quantity: item.Quantity,
-                        ItemPrice: item.ItemPrice,
-                        Material: item.Material,
-                        Plant: item.Plant
-                    })
-                    .where({ ItemNo: item.ItemNo, Request_requestid: req.data.requestid });
-            } else {
-                console.log(`Inserting new item with ItemNo: ${item.ItemNo} for requestid: ${req.data.requestid}`);
-                const insertResult = await INSERT.into(RequestItems).entries({
-                    ItemNo: item.ItemNo,  
-                    ItemDesc: item.ItemDesc,
-                    Quantity: item.Quantity,
-                    ItemPrice: item.ItemPrice,
-                    Material: item.Material,
-                    Plant: item.Plant,
-                    Request_requestid: req.data.requestid  
-                });
-
-                console.log("Insert result:", insertResult);
-            }
-        }
-
-        console.log("Executing SELECT query for updated items");
-        const updatedItems = await SELECT.from(RequestItems)
-            .where({ Request_requestid: req.data.requestid });
-
-        console.log("Retrieved Items:", JSON.stringify(updatedItems, null, 2));
-
-        if (!updatedItems.length) {
-            console.warn("No items found after processing. Check if INSERT/UPDATE is working correctly.");
-        }
-
-        return {
-            requestid: req.data.requestid,
-            status: req.data.status,
-            requestitems: updatedItems
-        };
+        return requestItems;
 
     } catch (error) {
-        console.error(" Error in updateRequestItems:", error.message);
-        return { error: error.message };
+        console.error("Error fetching request items:", error);
+        return req.error(500, "Failed to retrieve request items", { error: error.message });
     }
 });
 
+
+this.on('GetRequestItems', async (req) => {
+    try {
+        const { requestid } = req.data; // Get requestid from query params
+
+        if (!requestid) return req.error(400, "Missing requestid");
+
+        console.log("Fetching request items for requestid:", requestid);
+
+      //  const db = cds.transaction(req);
+
+        // Fetch request items based on requestid
+        const requestItems = await db.run(
+            SELECT.from('my.company.RequestItems')
+                .columns('ItemNo', 'Request_requestid', 'ItemDesc', 'Quantity', 'ItemPrice', 'Material', 'Plant')
+                .where({ Request_requestid: requestid })
+        );
+
+        if (!requestItems.length) {
+            return req.error(404, "No request items found for the given requestid");
+        }
+
+        return requestItems;
+
+    } catch (error) {
+        console.error("Error fetching request items:", error);
+        return req.error(500, "Failed to retrieve request items", { error: error.message });
+    }
+});
+
+
+    this.on('updateRequests', async (req) => {
+        console.log("🔹 Incoming Requests:", JSON.stringify(req.data, null, 2));
+
+        try {
+            const { requests } = req.data;
+
+            if (!requests || !requests.Request) {
+                throw new Error("'requests.Request' is missing or incorrect in payload.");
+            }
+
+            const requestData = requests.Request; // Extract the request object
+            const tx = cds.transaction(req);
+
+            console.log(`Processing requestid: ${requestData.requestid}`);
+
+            if (!requestData.requestid) {
+                throw new Error("Missing 'requestid' in request payload.");
+            }
+
+            // Check if request already exists
+            const existingRequest = await tx.run(
+                SELECT.one.from('my.company.Requests').where({ requestid: requestData.requestid })
+            );
+
+            if (existingRequest) {
+                console.log(`Updating requestid: ${requestData.requestid}`);
+                await tx.run(
+                    UPDATE('my.company.Requests')
+                        .set({
+                            status: requestData.status,
+                            requestno: requestData.requestno,
+                            requestdesc: requestData.requestdesc,
+                            requestby: requestData.requestby,
+                            totalprice: requestData.totalprice
+                        })
+                        .where({ requestid: requestData.requestid })
+                );
+            } else {
+                console.log(`Creating new request: ${requestData.requestid}`);
+                await tx.run(
+                    INSERT.into('my.company.Requests').entries({
+                        requestid: requestData.requestid,
+                        requestno: requestData.requestno,
+                        requestdesc: requestData.requestdesc,
+                        requestby: requestData.requestby,
+                        totalprice: requestData.totalprice,
+                        status: requestData.status
+                    })
+                );
+            }
+
+            // Update or insert request items
+            if (Array.isArray(requestData.requestitems)) {
+                for (const item of requestData.requestitems) {
+                    console.log(`Processing ItemNo: ${item.ItemNo} for requestid: ${requestData.requestid}`);
+
+                    const existingItem = await tx.run(
+                        SELECT.one.from('my.company.RequestItems')
+                            .where({ ItemNo: item.ItemNo, Request_requestid: requestData.requestid })
+                    );
+
+                    if (existingItem) {
+                        console.log(`Updating ItemNo: ${item.ItemNo}`);
+                        await tx.run(
+                            UPDATE('my.company.RequestItems')
+                                .set({
+                                    ItemDesc: item.ItemDesc,
+                                    Quantity: item.Quantity,
+                                    ItemPrice: item.ItemPrice,
+                                    Material: item.Material,
+                                    Plant: item.Plant
+                                })
+                                .where({ ItemNo: item.ItemNo, Request_requestid: requestData.requestid })
+                        );
+                    } else {
+                        console.log(`Inserting new ItemNo: ${item.ItemNo}`);
+                        await tx.run(
+                            INSERT.into('my.company.RequestItems').entries({
+                                ItemNo: item.ItemNo,
+                                Request_requestid: requestData.requestid,
+                                ItemDesc: item.ItemDesc,
+                                Quantity: item.Quantity,
+                                ItemPrice: item.ItemPrice,
+                                Material: item.Material,
+                                Plant: item.Plant
+                            })
+                        );
+                    }
+                }
+            }
+
+            // Fetch and return the updated request
+            const updatedRequest = await tx.run(
+                SELECT.one.from('my.company.Requests')
+                    .where({ requestid: requestData.requestid })
+            );
+
+            const updatedRequestItems = await tx.run(
+                SELECT.from('my.company.RequestItems')
+                    .where({ Request_requestid: requestData.requestid })
+            );
+
+            const response = {
+                requests: {
+                    Request: {
+                        requestid: updatedRequest.requestid,
+                        requestno: updatedRequest.requestno,
+                        requestdesc: updatedRequest.requestdesc,
+                        requestby: updatedRequest.requestby,
+                        totalprice: updatedRequest.totalprice,
+                        status: updatedRequest.status,
+                        requestitems: updatedRequestItems.map(item => ({
+                            ItemNo: item.ItemNo,
+                            ItemDesc: item.ItemDesc,
+                            Quantity: item.Quantity,
+                            ItemPrice: item.ItemPrice,
+                            Material: item.Material,
+                            Plant: item.Plant
+                        }))
+                    }
+                }
+            };
+
+            console.log("🔹 Final Updated Response:", JSON.stringify(response, null, 2));
+            return response;
+
+        } catch (error) {
+            console.error("❌ Error in updateRequests:", error.message);
+            return { error: error.message };
+        }
+    });
 });

@@ -3,31 +3,54 @@ POST http://localhost:4004/odata/v4/PurchaseApproval/datafrombpa
 Content-Type: application/json
 
 {
-  "status": "X",
+  "status": "A",
   "requestid": "14"
 }
 
 ##### get the update request item
-POST http://localhost:4004/odata/v4/PurchaseApproval/updateRequestItems
+POST http://localhost:4004/odata/v4/PurchaseApproval/updateRequests
 Content-Type: application/json
 
 {
-  "requestid": 12,
-  "status": "E",
-  "requestitems": [
-    {
-      "ItemNo": 1,
-      "ItemDesc": "Srija356",
-      "Quantity": 31,
-      "ItemPrice": 11,
-      "Material": "11",
-      "Plant": "11"
+  "requests": {
+    "Request": {
+      "requestid": 1001,
+      "requestno": "REQ-2024-001",
+      "requestdesc": "Purchasing keyboards",
+      "requestby": "John Doe",
+      "totalprice": 50000,
+      "status": "E",
+      "requestitems": [
+        {
+          "ItemNo": 1,
+          "ItemDesc": "MacBook Pro",
+          "Quantity": 2,
+          "ItemPrice": 25000,
+          "Material": "Laptop",
+          "Plant": "PLANT-001"
+        },
+        {
+          "ItemNo": 2,
+          "ItemDesc": "Dell XPS",
+          "Quantity": 1,
+          "ItemPrice": 20000,
+          "Material": "Laptop",
+          "Plant": "PLANT-002"
+        }
+      ]
     }
-  ]
+  }
 }
 
+
+
 #########get
-GET http://localhost:4004/odata/v4/PurchaseApproval/editRequest(requestid=13)
+GET http://localhost:4004/odata/v4/PurchaseApproval/EditRequestItems?requestid=14
+
+#######get the request id
+GET http://localhost:4004/odata/v4/PurchaseApproval/GetRequestItems(requestid=14)
+
+
 
 ###get
 POST http://localhost:4004/odata/v4/PurchaseApproval/approveRequest
